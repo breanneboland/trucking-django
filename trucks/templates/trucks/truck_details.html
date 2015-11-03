@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% block content %}
+
+    <div class="row">
+        <div id="day-buttons"></div>
+    </div>
+
+    <div class="row">
+        <div id="truck-location-map" class="col-xs-12 col-md-9 col-lg-9 left-column"></div>
+{% if truck %}
+        <div class="col-xs-0 col-md-3 col-lg-3 right-truck-column">
+            <h1 id="truck-name">{{ truck.name }}</h1>
+
+            <p id="truck-desc">This truck offers {{ truck.food_items}}. Check out its schedule and daily locations on the map.</p>
+            <div id="truck-info-text"></div>
+
+        </div>
+
+
+{% else %}
+        <div class="col-xs-0 col-md-4 col-lg-4"></div>
+
+{% endif %}
+    </div>
+
+<script>
+
+function initMap() {
+
+    var map;
+
+    var mapOptions = {
+        zoom: 12,
+        center: new google.maps.LatLng(37.756366, -122.438632)
+    };
+
+    map = new google.maps.Map(
+        document.getElementById("truck-location-map"),
+        mapOptions);
+
+        // Retrieving the information with AJAX
+    
+    var infoWindow = new google.maps.InfoWindow({
+        width: 100
+    });
+    // Keep this out of the loop so it only creates one info window at a time, otherwise, you'd get more and more each time you click a marker. No!
+
+    
+
+    $.get('/truck_info.json', {truck_id: {{ truck_id }} }, function (truck_schedule_info) {
+        // Attach markers to each truck location in returned JSON
+        var truck, marker, contentString;
+                
+        for (var key in truck_schedule_info) {
+            
+            truck = truck_schedule_info[key];
+
+            // Define the marker
+            marker = new google.maps.Marker({
+                position: new google.maps.LatLng(truck.xCoordinate, truck.yCoordinate),
+                map: map,
+                // day: truck.dayOfWeek,
+                title: 'Truck ID: ' + truck.truckName,
+            });
+
+            // Define the content of the infoWindow
+            contentString = (
+                '<div class="window-content">' +
+                    '<p><b>Day and times:</b> ' + truck.dayOfWeek + ', ' + truck.startTime + ' - ' + truck.endTime + '</p><p><b>Additional location/time information: </b>' + truck.locationDescription + ". " + truck.extraText + '.</p>' +
+                '</div>');
+
+            // Inside the loop we call bindInfoWindow passing it the marker,
+            // map, infoWindow and contentString
+            bindInfoWindow(marker, map, infoWindow, contentString);
+
+        }
+
+    });
+
+    // Good place to put the loop that will append truck object information to the page itself.
+
+    // This function is outside the for loop.
+    // When a marker is clicked it closes any currently open infowindows
+    // Sets the content for the new marker with the content passed through
+    // then it open the infoWindow with the new content on the marker that's clicked
+    function bindInfoWindow(marker, map, infoWindow, html) {
+        google.maps.event.addListener(marker, 'click', function () {
+            infoWindow.close();
+            infoWindow.setContent(html);
+            infoWindow.open(map, marker);
+        });
+    }
+}
+
+        // map=new google.maps.Map(document.getElementById("truck-location-map"), {
+        //       center: {lat: 37.7111991, lng: -122.3946933},
+        //       zoom: 7)
+        //       mapTypeId: google.maps.MapTypeId.ROADMAP,
+        //     };
+        // console.log("Hi!");
+
+        // };
+
+    google.maps.event.addDomListener(window, 'load', initMap);
+
+// google.maps.event.addDomListener('click', $('#Monday'), function (e) {
+//     if (marker.day == "Monday") {
+//         bindInfoWindow(marker, map, infoWindow, contentString);
+//     }
+//     else {
+//         marker.setVisible(false);
+//     }
+// }
+
+
+</script>
+
+<script>
+
+function appendSchedule () {
+    $.get('/truck_schedule_times', { truck_id: {{truck_id }} }, function (schedule_info) {
+        var details = schedule_info;
+        $('#truck-info-text').html(details);
+    });
+};
+
+$('#truck-info-text').load(appendSchedule());
+
+// Could make a CSS selector class on the P connects to the day of the week, and then there are hidden settings (true/false) based on the day of the week the person selects. Checkboxes for each day of the week, and they toggle hide/show based on the class. 
+
+//Need to get ID/day from the button clicked and be able to pass it as a variable that can be used to create a class value to give to jQuery. 
+</script>
+
+
+{% endblock %}

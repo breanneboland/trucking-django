@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% block content %}
+
+
+<div class="row">
+    <div id="day-buttons" class="col-xs-12 col-md-9 col-lg-9 center-block">
+        <center><a href="/day/Sunday" class="button">Sunday</a>
+        <a href="/day/Monday" class="button">Monday</a>
+        <a href="/day/Tuesday" class="button">Tuesday</a>
+        <a href="/day/Wednesday" class="button">Wednesday</a>
+        <a href="/day/Thursday" class="button">Thursday</a>
+        <a href="/day/Friday" class="button">Friday</a>
+        <a href="/day/Saturday" class="button">Saturday</a></center>
+    </div>
+    <div id="col-xs-0 col-md-3 col-lg-3"></div>
+</div>
+
+<div class="row">
+    <input id="map-input" class="controls" type="text" placeholder="Enter your address!">
+    <input type="hidden" id="city2" name="city2" />
+    <input type="hidden" id="cityLat" name="cityLat" />
+    <input type="hidden" id="cityLng" name="cityLng" />  
+
+    <div id="general-map" class="col-xs-12 col-md-9 col-lg-9 left-column"></div>
+
+    <div class="col-xs-0 col-md-3 col-lg-3 right-column">
+        <br>
+        <br>
+        <br>
+        <br>
+        <p class="homepage-text">Go Truck Yourself offers you a few different ways to get to trucking. You can:</p>
+        <ul>
+            <li>Search by location, using the search bar on the map to the left or any of the day-of-week maps linked above</li>
+            <li>Search by day of week; this map shows today, while the day-of-week links will take you to the other days</li>
+            <li>Search by food item or business name, using the search bar at the top</li>
+        </ul>
+
+        <p>This data comes from SF OpenData's API and tables, which make public records of food truck business permits and food truck location permits. The first offers business details; the second offers days, times, and coordinates of locations.</p>
+
+    </div>
+</div>
+
+
+<script>
+
+function initMap() {
+    var map;
+    var mapOptions = {
+        zoom: 12,
+        center: new google.maps.LatLng(37.756366, -122.438632)
+    };
+    map = new google.maps.Map(
+        document.getElementById("general-map"),
+        mapOptions);
+        // Retrieving the information with AJAX
+    
+    var input = document.getElementById('map-input');
+    var autocomplete = new google.maps.places.Autocomplete(input);
+    map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
+    google.maps.event.addListener(autocomplete, 'place_changed', function () {
+        var newPlace = autocomplete.getPlace();
+
+        document.getElementById('city2').value = newPlace.name;
+        // document.getElementById('cityLat').value = place.geometry.location.lat();
+        // document.getElementById('cityLng').value = place.geometry.location.lng();
+        var newLat = newPlace.geometry.location.lat();
+        var newLong = newPlace.geometry.location.lng();
+        var center = new google.maps.LatLng(newLat, newLong);
+
+        map.setZoom(16);
+
+        map.panTo(center);
+
+        console.log("This function is working!");
+        console.log(newPlace.name);
+        console.log(newPlace.address_components[0].long_name);    
+    });
+    
+    var infoWindow = new google.maps.InfoWindow({
+        width: 100
+    });
+    console.log("This is the line before the get request");
+    $.get('/all_truck_info.json', function (truck_schedule_info) {
+        console.log(truck_schedule_info);
+        var truck, marker, contentString;
+                
+        for (var key in truck_schedule_info) {
+            
+            truck = truck_schedule_info[key];
+
+            marker = new google.maps.Marker({
+                position: new google.maps.LatLng(truck.xCoordinate, truck.yCoordinate),
+                map: map,
+                title: 'Truck ID: ' + truck.truckName
+            });
+            console.log("This is a line in the middle of the marker-creating function; it should show up several thousand times.");
+            contentString = (
+                '<div class="window-content">' +
+                    '<p><b>Truck name: </b>' + truck.truckName + '</p><p><a href="/truck/' + truck.truckId + '">Learn more about this truck.</a></p><p><b>Day and times:</b> ' + truck.dayOfWeek + ', ' + truck.startTime + ' - ' + truck.endTime + '</p><p><b>Additional truck information: </b>' + truck.locationDescription + ". " + truck.extraText + '</p></div>');
+
+            bindInfoWindow(marker, map, infoWindow, contentString);
+        }
+    });
+    console.log("This is the line after the get request");
+    function bindInfoWindow(marker, map, infoWindow, html) {
+        google.maps.event.addListener(marker, 'click', function () {
+            infoWindow.close();
+            infoWindow.setContent(html);
+            infoWindow.open(map, marker);
+        });
+    }
+}
+google.maps.event.addDomListener(window, 'load', initMap);
+</script>
+
+
+
+
+{% endblock %}
